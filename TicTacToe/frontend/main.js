@@ -1,4 +1,6 @@
 let user = null;
+let users = [];
+let turn = "";
 let board = [];
 
 var socket = io("http://localhost:3000", [
@@ -8,14 +10,50 @@ var socket = io("http://localhost:3000", [
 ]);
 
 socket.on("connect", function () {
-    user = null;
-    board = []
+	user = null;
+	board = [];
 	document.getElementById("message").innerHTML = "Connected";
+	document.getElementById("turn").innerHTML = "";
 });
 
-socket.on('setUser', function (data) {
-    user = data;
-    console.log(user);
+socket.on("full", () => {
+	document.getElementById("message").innerHTML = "Server is full";
+	document.getElementById("turn").innerHTML = "";
+});
+
+socket.on("setUser", function (data) {
+	user = data;
+	console.log(user);
+});
+
+socket.on("start", (data) => {
+	users = data.users;
+	turn = data.turn;
+	board = data.board;
+	renderBoard();
+
+	document.getElementById(
+		"message"
+	).innerHTML = `You are ${user.name} and your symbol is ${user.symbol}`;
+});
+
+socket.on("turn", (data) => {
+	turn = data;
+	document.getElementById(
+		"message"
+	).innerHTML = `You are ${user.symbol}`;
+	document.getElementById("turn").innerHTML = `It is ${turn}'s turn`;
+});
+
+socket.on("move", (data) => {
+	board = data.board;
+	turn = data.turn;
+	renderBoard();
+});
+
+socket.on('winner', (data) => {
+    document.getElementById('message').innerHTML = ''
+    document.getElementById('turn').innerHTML = `The winner is ${data}`
 })
 
 socket.on("disconnect", function () {
@@ -42,6 +80,16 @@ function renderBoard() {
 }
 
 function handleClick(i) {
-	board[i] = "X";
-	renderBoard();
+	if (board[i] === "") {
+		if (turn === user.symbol) {
+			board[i] = user.symbol;
+			socket.emit("move", {
+				board: board,
+				turn: turn,
+				i: i,
+			});
+		} else {
+			document.getElementById("turn").innerHTML = `IT IS ${turn}'s TURN`;
+		}
+	}
 }

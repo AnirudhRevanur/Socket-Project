@@ -18,7 +18,14 @@ let turn = "X";
 let board = ["", "", "", "", "", "", "", "", ""];
 
 io.on("connection", (socket) => {
-	console.log("a user connected");
+	if (users.length === 2) {
+		socket.emit("full");
+		return;
+	}
+	if (users.length == 0) {
+		turn = "X";
+		board = ["", "", "", "", "", "", "", "", ""];
+	}
 
 	let user = {
 		id: socket.id,
@@ -30,14 +37,16 @@ io.on("connection", (socket) => {
 	if (users.length < 2) {
 		users.push(user);
 	}
-
 	socket.emit("setUser", user);
 
-	socket.emit("start", {
-		users: users,
-		turn: turn,
-		board: board,
-	});
+	if (users.length === 2) {
+		io.emit("start", {
+			users: users,
+			turn: turn,
+			board: board,
+		});
+		io.sockets.emit("turn", turn);
+	}
 
 	socket.on("move", (data) => {
 		board = data.board;
@@ -48,6 +57,48 @@ io.on("connection", (socket) => {
 			turn: turn,
 			i: data.i,
 		});
+
+		turn = turn === "X" ? "O" : "X";
+		io.sockets.emit("turn", turn);
+
+		let winner = "";
+		if (board[0] === board[1] && board[1] === board[2] && board[0] !== "") {
+			winner = board[0];
+		}
+		if (board[3] === board[4] && board[4] === board[5] && board[3] !== "") {
+			winner = board[3];
+		}
+		if (board[6] === board[7] && board[7] === board[8] && board[6] !== "") {
+			winner = board[6];
+		}
+		if (board[0] === board[3] && board[3] === board[6] && board[0] !== "") {
+			winner = board[0];
+		}
+		if (board[1] === board[4] && board[1] === board[7] && board[1] !== "") {
+			winner = board[1];
+		}
+		if (board[2] === board[5] && board[5] === board[8] && board[2] !== "") {
+			winner = board[2];
+		}
+		if (board[0] === board[4] && board[4] === board[8] && board[0] !== "") {
+			winner = board[0];
+		}
+		if (board[2] === board[4] && board[4] === board[6] && board[2] !== "") {
+			winner = board[2];
+		}
+		if (winner !== "") {
+			io.emit("winner", winner);
+		}
+
+		let draw = true;
+		for (let i = 0; i < 9; i++) {
+			if (board[i] === "") {
+				draw = false;
+			}
+		}
+		if (draw) {
+			io.emit("winner", "Draw");
+		}
 	});
 
 	socket.on("disconnect", () => {
