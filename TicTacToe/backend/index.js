@@ -33,6 +33,23 @@ io.on("connection", (socket) => {
 
 	socket.emit("setUser", user);
 
+	socket.emit("start", {
+		users: users,
+		turn: turn,
+		board: board,
+	});
+
+	socket.on("move", (data) => {
+		board = data.board;
+		turn = data.turn;
+
+		io.emit("move", {
+			board: board,
+			turn: turn,
+			i: data.i,
+		});
+	});
+
 	socket.on("disconnect", () => {
 		users = users.filter((user) => user.id !== socket.id);
 	});
